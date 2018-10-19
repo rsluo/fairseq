@@ -13,7 +13,8 @@ class FairseqCriterion(_Loss):
     def __init__(self, args, task):
         super().__init__()
         self.args = args
-        self.padding_idx = task.target_dictionary.pad()
+        # self.padding_idx = task.target_dictionary.pad()
+        self.padding_idx = 0
 
     @staticmethod
     def add_args(parser):

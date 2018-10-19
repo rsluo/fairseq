@@ -105,3 +105,7 @@ ENV/
 
 # Generated files
 fairseq/temporal_convolution_tbc
+
+# Data
+data-bin/
+wmt14.en-fr.fconv-py/

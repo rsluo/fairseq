@@ -17,6 +17,8 @@ def collate(
     samples, pad_idx, eos_idx, left_pad_source=True, left_pad_target=False,
     input_feeding=True,
 ):
+    print('LanguagePairDataset samples', samples)
+
     if len(samples) == 0:
         return {}
 
@@ -52,6 +54,8 @@ def collate(
             prev_output_tokens = prev_output_tokens.index_select(0, sort_order)
     else:
         ntokens = sum(len(s['source']) for s in samples)
+
+    print('LanguagePairDataset src_tokens', src_tokens)
 
     batch = {
         'id': id,
@@ -119,6 +123,7 @@ class LanguagePairDataset(FairseqDataset):
         self.input_feeding = input_feeding
 
     def __getitem__(self, index):
+        print('LanguagePairDataset index', index)
         return {
             'id': index,
             'source': self.src[index],

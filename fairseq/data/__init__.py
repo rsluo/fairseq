@@ -13,6 +13,7 @@ from .append_eos_dataset import AppendEosDataset
 from .language_pair_dataset import LanguagePairDataset
 from .monolingual_dataset import MonolingualDataset
 from .token_block_dataset import TokenBlockDataset
+from .trajectory_dataset import TrajectoryDataset
 
 from .iterators import (
     CountingIterator,
@@ -37,4 +38,5 @@ __all__ = [
     'MonolingualDataset',
     'ShardedIterator',
     'TokenBlockDataset',
+    'TrajectoryDataset'
 ]

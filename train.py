@@ -36,6 +36,7 @@ def main(args):
 
     # Load dataset splits
     load_dataset_splits(task, ['train', 'valid'])
+    # load_dataset_splits(task, ['train'])
 
     # Build model and criterion
     model = task.build_model(args)
@@ -50,6 +51,8 @@ def main(args):
         task.max_positions(),
         model.max_positions(),
     )
+    print('max_tokens', args.max_tokens)
+    print('max_positions', max_positions)
     dummy_batch = task.dataset('train').get_dummy_batch(args.max_tokens, max_positions)
 
     # Build trainer
@@ -85,6 +88,7 @@ def main(args):
     train_meter.start()
     valid_losses = [None]
     valid_subsets = args.valid_subset.split(',')
+    print('VALID_SUBSETS', valid_subsets)
     while lr > args.min_lr and epoch_itr.epoch < max_epoch and trainer.get_num_updates() < max_update:
         # train for one epoch
         train(args, trainer, task, epoch_itr)
@@ -194,6 +198,7 @@ def get_training_stats(trainer):
 def validate(args, trainer, task, epoch_itr, subsets):
     """Evaluate the model on the validation set(s) and return the losses."""
     valid_losses = []
+    print('SUBSETS', subsets)
     for subset in subsets:
         # Initialize data iterator
         itr = task.get_batch_iterator(
@@ -331,12 +336,16 @@ def load_checkpoint(args, trainer, epoch_itr):
 def load_dataset_splits(task, splits):
     for split in splits:
         if split == 'train':
-            task.load_dataset(split, combine=True)
+            task.load_dataset(split)
+            # task.load_dataset(split, combine=True)
+        elif split == "valid":
+            task.load_dataset(split)
         else:
             for k in itertools.count():
                 split_k = split + (str(k) if k > 0 else '')
                 try:
-                    task.load_dataset(split_k, combine=False)
+                    task.load_dataset(split_k)
+                    # task.load_dataset(split_k, combine=False)
                 except FileNotFoundError as e:
                     if k > 0:
                         break

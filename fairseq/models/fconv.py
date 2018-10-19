@@ -318,12 +318,12 @@ class FConvEncoder(FairseqEncoder):
     def reorder_encoder_out(self, encoder_out, new_order):
         if encoder_out['encoder_out'] is not None:
             encoder_out['encoder_out'] = (
-                encoder_out['encoder_out'][0].index_select(0, new_order),
-                encoder_out['encoder_out'][1].index_select(0, new_order),
+                encoder_out['encoder_out'][0].index_select(0, new_order.long()),
+                encoder_out['encoder_out'][1].index_select(0, new_order.long()),
             )
         if encoder_out['encoder_padding_mask'] is not None:
             encoder_out['encoder_padding_mask'] = \
-                encoder_out['encoder_padding_mask'].index_select(0, new_order)
+                encoder_out['encoder_padding_mask'].index_select(0, new_order.long())
         return encoder_out
 
     def max_positions(self):
