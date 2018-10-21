@@ -16,6 +16,7 @@ class TrajectoryDataset(FairseqDataset):
 	def __getitem__(self, filepath_idx):
 		traj_array = np.zeros((self.num_input_points, 3))
 		target_array = np.zeros((self.num_input_points, 3))
+		print("filepath Idx ", filepath_idx)
 		filepath = os.path.join(self.all_filepaths[filepath_idx], "skeleton.txt")
 
 		with open(filepath) as file:

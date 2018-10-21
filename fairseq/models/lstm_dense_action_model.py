@@ -6,17 +6,17 @@ from fairseq.models import BaseFairseqModel, register_model
 from fairseq.models import register_model_architecture
 
 
-@register_model('simple_lstm')
+@register_model('lstm_dense_action_model')
 class LSTMDenseActionModel(BaseFairseqModel):
 
-	 def __init__(self, encoder):
+	def __init__(self, encoder):
 			super().__init__()
 
 			self.encoder = encoder
-			self.dense = nn.Linear(self.encoder.)
+			self.dense = nn.Linear(self.encoder)
 			assert isinstance(self.encoder, FairseqEncoder)
 
-		def forward(self, src_tokens, src_lengths, prev_output_tokens):
+	def forward(self, src_tokens, src_lengths, prev_output_tokens):
 			"""
 			Run the forward pass for an encoder-decoder model.
 
@@ -38,10 +38,11 @@ class LSTMDenseActionModel(BaseFairseqModel):
 				the decoder's output, typically of shape `(batch, tgt_len, vocab)`
 			"""
 			encoder_out = self.encoder(src_tokens, src_lengths)
-			out = nn.Linear
-			return out, prob
+			#out = nn.Linear
+			#return out, prob
+			return encoder_out
 
-		def max_positions(self):
+	def max_positions(self):
 			"""Maximum length supported by the model."""
 			return (self.encoder.max_positions(), self.decoder.max_positions())
 			
@@ -173,7 +174,7 @@ class SimpleLSTMEncoder(FairseqEncoder):
 			'final_hidden': final_hidden.index_select(0, new_order),
 		}
 
-@register_model_architecture('simple_lstm', 'tutorial_simple_lstm')
+@register_model_architecture('lstm_dense_action_model', 'lstm_dense_am')
 def tutorial_simple_lstm(args):
 	args.encoder_hidden_dim = getattr(args, 'encoder_hidden_dim', 256)
 
