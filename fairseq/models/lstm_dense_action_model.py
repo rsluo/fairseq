@@ -83,7 +83,6 @@ class SimpleLSTMEncoder(FairseqEncoder):
 	def __init__(self, 
 				args,
 				dictionary={},
-				out_classes,
 				hidden_dim=128, 
 				input_dim=3, 
 				num_layers=1, 
@@ -127,7 +126,7 @@ class SimpleLSTMEncoder(FairseqEncoder):
 		else:
 			self.baseline = nn.Linear(input_dim, hidden_dim)
 
-		self.dense = nn.Linear(hidden_dim, out_classes)
+		self.dense = nn.Linear(hidden_dim, args['num_classes'])
 
 		# ### #
 		# use_attention = False ###### TODO Setting this to false to obtain a good baseline #####
