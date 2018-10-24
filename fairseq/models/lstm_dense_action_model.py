@@ -13,7 +13,6 @@ class LSTMDenseActionModel(BaseFairseqModel):
 			super().__init__()
 
 			self.encoder = encoder
-			self.dense = nn.Linear(self.encoder)
 			assert isinstance(self.encoder, FairseqEncoder)
 
 	def forward(self, src_tokens, src_lengths, prev_output_tokens):
@@ -38,9 +37,8 @@ class LSTMDenseActionModel(BaseFairseqModel):
 				the decoder's output, typically of shape `(batch, tgt_len, vocab)`
 			"""
 			encoder_out = self.encoder(src_tokens, src_lengths)
-			#out = nn.Linear
-			#return out, prob
-			return encoder_out
+			probs = nn.Softmax(encoder_out)
+			return encoder_out, probs
 
 	def max_positions(self):
 			"""Maximum length supported by the model."""
@@ -85,6 +83,7 @@ class SimpleLSTMEncoder(FairseqEncoder):
 	def __init__(self, 
 				args,
 				dictionary={},
+				out_classes=10,
 				hidden_dim=128, 
 				input_dim=3, 
 				num_layers=1, 
@@ -128,11 +127,14 @@ class SimpleLSTMEncoder(FairseqEncoder):
 		else:
 			self.baseline = nn.Linear(input_dim, hidden_dim)
 
-		### #
-		use_attention = False ###### TODO Setting this to false to obtain a good baseline #####
-		if use_attention:
-			self.attn = nn.Linear((2 if use_bidirection else 1) * hidden_dim, 1)
-			self.attn_softmax = nn.Softmax(dim=1)
+		self.dense = nn.Linear(hidden_dim, out_classes)
+
+		# ### #
+		# use_attention = False ###### TODO Setting this to false to obtain a good baseline #####
+		# if use_attention:
+		# 	self.attn = nn.Linear((2 if use_bidirection else 1) * hidden_dim, 1)
+		# 	self.attn_softmax = nn.Softmax(dim=1)
+
 		
 
 	def forward(self, inputs, lengths=None, return_attn=False):
@@ -153,10 +155,8 @@ class SimpleLSTMEncoder(FairseqEncoder):
 		# # 	mean = torch.mean(cell_outputs, dim=1)
 		# # model_outputs = self.output_layer(cell_outputs)
 		_outputs, (final_hidden, _final_cell) = self.cell(inputs.float())
-		if return_attn:
-			return {'final_hidden': final_hidden.squeeze(0)}, softmax
-		else:
-			return {'final_hidden': final_hidden.squeeze(0)}
+		encoded = self.dense(final_hidden.squeeze(0))
+		return {'final_hidden': encoded}
 
 	def reorder_encoder_out(self, encoder_out, new_order):
 		"""
@@ -169,6 +169,7 @@ class SimpleLSTMEncoder(FairseqEncoder):
 		Returns:
 			'encoder_out' rearranged according to 'new_order'
 		"""
+		print("Reordering encoder_out")
 		final_hidden = encoder_out['final_hidden']
 		return {
 			'final_hidden': final_hidden.index_select(0, new_order),

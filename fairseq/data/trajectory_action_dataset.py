@@ -9,13 +9,21 @@ class TrajectoryActionDataset(FairseqDataset):
 		self.num_input_points = num_input_points
 		self.shuffle = shuffle
 		self.all_filepaths = [a for (a, b, c) in os.walk(self.root_dir) if len(b) == 0]
+		self.valid_actions = []
+		for path in self.all_filepaths:
+			self.valid_actions.append(path.split("/")[-2])
 
+		self.action_labels = {}
+		for idx, action in self.valid_actions:
+			if action not in self.action_labels:
+				self.action_labels[action] = idx
+	
 	def __len__(self):
 		return len(self.all_filepaths)
 
 	def __getitem__(self, filepath_idx):
 		traj_array = np.zeros((self.num_input_points, 3))
-		target_array = np.zeros((self.num_input_points, 3))
+		target_array = np.zeros(self.num_input_points)
 		filepath = os.path.join(self.all_filepaths[filepath_idx], "skeleton.txt")
 
 		with open(filepath) as file:
@@ -25,9 +33,7 @@ class TrajectoryActionDataset(FairseqDataset):
 					traj_array[i, 0] = file_contents[i].split()[1]
 					traj_array[i, 1] = file_contents[i].split()[2]
 					traj_array[i, 2] = file_contents[i].split()[3]
-					target_array[i, 0] = file_contents[i+1].split()[1]
-					target_array[i, 1] = file_contents[i+1].split()[2]
-					target_array[i, 2] = file_contents[i+1].split()[3]
+					target_array[i] = self.action_labels[filepath.split("/")[-3]]
 
 		# return (target_array, traj_array)
 		return {
@@ -52,6 +58,9 @@ class TrajectoryActionDataset(FairseqDataset):
 	def num_tokens(self, idx):
 		return self.num_input_points
 
+	def num_classes(self):
+		return len(self.valid_actions)
+		
 	def get_dummy_batch(self, num_tokens, max_positions):
 		bsz = num_tokens // self.num_input_points
 		print('bsz', bsz)
