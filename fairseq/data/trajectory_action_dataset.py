@@ -35,7 +35,6 @@ class TrajectoryActionDataset(FairseqDataset):
 					traj_array[i, 2] = file_contents[i].split()[3]
 					target_array[i] = self.action_labels[filepath.split("/")[-3]]
 
-		# return (target_array, traj_array)
 		return {
 			'id': filepath_idx,
 			'source': traj_array,

@@ -83,7 +83,7 @@ class SimpleLSTMEncoder(FairseqEncoder):
 	def __init__(self, 
 				args,
 				dictionary={},
-				out_classes=10,
+				out_classes,
 				hidden_dim=128, 
 				input_dim=3, 
 				num_layers=1, 
