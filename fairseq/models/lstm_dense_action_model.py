@@ -42,7 +42,7 @@ class LSTMDenseActionModel(BaseFairseqModel):
 
 	def max_positions(self):
 			"""Maximum length supported by the model."""
-			return (self.encoder.max_positions(), self.decoder.max_positions())
+			return (self.encoder.max_positions(), 1)
 			
 	@staticmethod
 	def add_args(parser):

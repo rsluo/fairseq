@@ -14,7 +14,7 @@ class TrajectoryActionDataset(FairseqDataset):
 			self.valid_actions.append(path.split("/")[-2])
 
 		self.action_labels = {}
-		for idx, action in self.valid_actions:
+		for idx, action in enumerate(self.valid_actions):
 			if action not in self.action_labels:
 				self.action_labels[action] = idx
 	
