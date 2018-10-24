@@ -133,19 +133,7 @@ def train(args, trainer, task, epoch_itr):
 
         # log mid-epoch stats
         stats = get_training_stats(trainer)
-        for k, v in log_output.items():
-            if k in ['loss', 'nll_loss', 'ntokens', 'nsentences', 'sample_size']:
-                continue  # these are already logged above
-            if 'loss' in k:
-                extra_meters[k].update(v, log_output['sample_size'])
-            else:
-                extra_meters[k].update(v)
-            stats[k] = extra_meters[k].avg
         progress.log(stats)
-
-        # ignore the first mini-batch in words-per-second calculation
-        if i == 0:
-            trainer.get_meter('wps').reset()
 
         num_updates = trainer.get_num_updates()
         if args.save_interval_updates > 0 and num_updates % args.save_interval_updates == 0 and num_updates > 0:
@@ -163,7 +151,7 @@ def train(args, trainer, task, epoch_itr):
 
     # reset training meters
     for k in [
-        'train_loss', 'train_nll_loss', 'wps', 'ups', 'wpb', 'bsz', 'gnorm', 'clip',
+        'train_loss', 'train_nll_loss', 'bsz', 'gnorm', 'clip',
     ]:
         meter = trainer.get_meter(k)
         if meter is not None:
@@ -178,10 +166,6 @@ def get_training_stats(trainer):
         stats['nll_loss'] = '{:.3f}'.format(nll_loss)
     else:
         nll_loss = trainer.get_meter('train_loss').avg
-    stats['ppl'] = get_perplexity(nll_loss)
-    stats['wps'] = round(trainer.get_meter('wps').avg)
-    stats['ups'] = '{:.1f}'.format(trainer.get_meter('ups').avg)
-    stats['wpb'] = round(trainer.get_meter('wpb').avg)
     stats['bsz'] = round(trainer.get_meter('bsz').avg)
     stats['num_updates'] = trainer.get_num_updates()
     stats['lr'] = trainer.get_lr()
@@ -226,16 +210,6 @@ def validate(args, trainer, task, epoch_itr, subsets):
             meter = trainer.get_meter(k)
             if meter is not None:
                 meter.reset()
-        extra_meters = collections.defaultdict(lambda: AverageMeter())
-
-        for sample in progress:
-            log_output = trainer.valid_step(sample)
-
-            for k, v in log_output.items():
-                if k in ['loss', 'nll_loss', 'ntokens', 'nsentences', 'sample_size']:
-                    continue
-                extra_meters[k].update(v)
-
         # log validation stats
         stats = get_valid_stats(trainer)
         for k, meter in extra_meters.items():
@@ -254,19 +228,10 @@ def get_valid_stats(trainer):
         stats['valid_nll_loss'] = nll_loss
     else:
         nll_loss = trainer.get_meter('valid_loss').avg
-    stats['valid_ppl'] = get_perplexity(nll_loss)
     stats['num_updates'] = trainer.get_num_updates()
     if hasattr(save_checkpoint, 'best'):
         stats['best'] = min(save_checkpoint.best, stats['valid_loss'])
     return stats
-
-
-def get_perplexity(loss):
-    try:
-        return '{:.2f}'.format(math.pow(2, loss))
-    except OverflowError:
-        return float('inf')
-
 
 def save_checkpoint(args, trainer, epoch_itr, val_loss):
     if args.no_save or not distributed_utils.is_master(args):
@@ -315,21 +280,22 @@ def load_checkpoint(args, trainer, epoch_itr):
     """Load a checkpoint and replay dataloader to match."""
     os.makedirs(args.save_dir, exist_ok=True)
     checkpoint_path = os.path.join(args.save_dir, args.restore_file)
-    if os.path.isfile(checkpoint_path):
-        extra_state = trainer.load_checkpoint(checkpoint_path, args.reset_optimizer, args.reset_lr_scheduler,
-                                              eval(args.optimizer_overrides))
-        if extra_state is not None:
-            # replay train iterator to match checkpoint
-            epoch_itr.load_state_dict(extra_state['train_iterator'])
+    print("Path ", checkpoint_path)
+    # if os.path.isfile(checkpoint_path):
+    #     extra_state = trainer.load_checkpoint(checkpoint_path, args.reset_optimizer, args.reset_lr_scheduler,
+    #                                           eval(args.optimizer_overrides))
+    #     if extra_state is not None:
+    #         # replay train iterator to match checkpoint
+    #         epoch_itr.load_state_dict(extra_state['train_iterator'])
 
-            print('| loaded checkpoint {} (epoch {} @ {} updates)'.format(
-                checkpoint_path, epoch_itr.epoch, trainer.get_num_updates()))
+    #         print('| loaded checkpoint {} (epoch {} @ {} updates)'.format(
+    #             checkpoint_path, epoch_itr.epoch, trainer.get_num_updates()))
 
-            trainer.lr_step(epoch_itr.epoch)
-            trainer.lr_step_update(trainer.get_num_updates())
-            if 'best' in extra_state:
-                save_checkpoint.best = extra_state['best']
-        return True
+    #         trainer.lr_step(epoch_itr.epoch)
+    #         trainer.lr_step_update(trainer.get_num_updates())
+    #         if 'best' in extra_state:
+    #             save_checkpoint.best = extra_state['best']
+    #     return True
     return False
 
 

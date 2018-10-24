@@ -42,7 +42,7 @@ class LSTMDenseActionModel(BaseFairseqModel):
 
 	def max_positions(self):
 			"""Maximum length supported by the model."""
-			return (self.encoder.max_positions(), self.decoder.max_positions())
+			return self.encoder.max_positions()
 			
 	@staticmethod
 	def add_args(parser):
@@ -83,7 +83,7 @@ class SimpleLSTMEncoder(FairseqEncoder):
 	def __init__(self, 
 				args,
 				dictionary={},
-				out_classes=10,
+				out_classes,
 				hidden_dim=128, 
 				input_dim=3, 
 				num_layers=1, 
