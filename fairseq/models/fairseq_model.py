@@ -29,7 +29,7 @@ class BaseFairseqModel(nn.Module):
         """Build a new model instance."""
         raise NotImplementedError
 
-    def get_targets(self, sample, net_output):
+    def get_targets(self, sample):
         """Get targets from either the sample or the net's output."""
         return sample['target']
 

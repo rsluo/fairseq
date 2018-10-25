@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+
 from fairseq import utils
 from fairseq.models import FairseqEncoder
 from fairseq.models import BaseFairseqModel, register_model
@@ -36,8 +38,12 @@ class LSTMDenseActionModel(BaseFairseqModel):
 			Returns:
 				the decoder's output, typically of shape `(batch, tgt_len, vocab)`
 			"""
-			encoder_out = self.encoder(src_tokens, src_lengths)
-			probs = nn.Softmax(encoder_out)
+			encoder_out = self.encoder(src_tokens, src_lengths)['final_hidden']
+#			print("Encoder output ", encoder_out.size())
+			probs = F.softmax(encoder_out, dim=-1)
+#			print("Probs ", probs.size())
+			_, actions = torch.max(probs, dim=1)
+			# print("Actions ", actions.size())
 			return encoder_out, probs
 
 	def max_positions(self):
@@ -91,7 +97,8 @@ class SimpleLSTMEncoder(FairseqEncoder):
 				use_attention=False, 
 				cell_type='LSTM', 
 				use_cuda=True, 
-				max_length=784
+				max_length=784,
+				out_classses = 45   # Hardcoding; number of classes present in the current dataset
 			):
 		super().__init__(dictionary)
 		self.args = args
@@ -126,7 +133,7 @@ class SimpleLSTMEncoder(FairseqEncoder):
 		else:
 			self.baseline = nn.Linear(input_dim, hidden_dim)
 
-		self.dense = nn.Linear(hidden_dim, args['num_classes'])
+		self.dense = nn.Linear(hidden_dim, out_classses)
 
 		# ### #
 		# use_attention = False ###### TODO Setting this to false to obtain a good baseline #####
@@ -137,22 +144,6 @@ class SimpleLSTMEncoder(FairseqEncoder):
 		
 
 	def forward(self, inputs, lengths=None, return_attn=False):
-		# # inputs = Variable(inputs)
-		# # batch_size, seq_length, input_dim = inputs.shape
-
-		# if self.use_cuda:
-		# 	inputs = inputs.cuda()
-		# if self.cell_type:
-		# 	cell_outputs, _ = self.cell(inputs)
-		# else:
-		# 	cell_outputs = self.baseline(inputs)
-		# if self.use_attention:
-		# 	logits = self.attn(cell_outputs)
-		# 	softmax = self.attn_softmax(logits)
-		# 	mean = torch.sum(softmax * cell_outputs, dim=1)
-		# # else:
-		# # 	mean = torch.mean(cell_outputs, dim=1)
-		# # model_outputs = self.output_layer(cell_outputs)
 		_outputs, (final_hidden, _final_cell) = self.cell(inputs.float())
 		encoded = self.dense(final_hidden.squeeze(0))
 		return {'final_hidden': encoded}

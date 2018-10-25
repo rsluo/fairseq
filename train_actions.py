@@ -54,9 +54,7 @@ def main(args):
     print('max_tokens', args.max_tokens)
     print('max_positions', max_positions)
     dummy_batch = task.dataset('train').get_dummy_batch(args.max_tokens, max_positions)
-
-    args['num_classes'] = task.dataset('train').num_classes()
-
+    
     # Build trainer
     trainer = Trainer(args, task, model, criterion, dummy_batch)
     print('| training on {} GPUs'.format(args.distributed_world_size))
@@ -85,12 +83,14 @@ def main(args):
     # Train until the learning rate gets too small
     max_epoch = args.max_epoch or math.inf
     max_update = args.max_update or math.inf
+
+    print("Max update", max_update)
     lr = trainer.get_lr()
     train_meter = StopwatchMeter()
     train_meter.start()
     valid_losses = [None]
     valid_subsets = args.valid_subset.split(',')
-    print('VALID_SUBSETS', valid_subsets)
+    print('VALID_SUBSETS', valid_subsets, " epoch ", max_epoch)
     while lr > args.min_lr and epoch_itr.epoch < max_epoch and trainer.get_num_updates() < max_update:
         # train for one epoch
         train(args, trainer, task, epoch_itr)
@@ -99,11 +99,12 @@ def main(args):
             valid_losses = validate(args, trainer, task, epoch_itr, valid_subsets)
 
         # only use first validation loss to update the learning rate
-        lr = trainer.lr_step(epoch_itr.epoch, valid_losses[0])
+        #lr = trainer.lr_step(epoch_itr.epoch, valid_losses[0])
 
         # save checkpoint
         if epoch_itr.epoch % args.save_interval == 0:
             save_checkpoint(args, trainer, epoch_itr, valid_losses[0])
+        print(lr, " ",args.min_lr, " ", epoch_itr.epoch, " ", trainer.get_num_updates(), " ", max_update)
     train_meter.stop()
     print('| done training in {:.1f} seconds'.format(train_meter.sum))
 
@@ -184,7 +185,7 @@ def get_training_stats(trainer):
 def validate(args, trainer, task, epoch_itr, subsets):
     """Evaluate the model on the validation set(s) and return the losses."""
     valid_losses = []
-    print('SUBSETS', subsets)
+    #print('SUBSETS', subsets)
     for subset in subsets:
         # Initialize data iterator
         itr = task.get_batch_iterator(
@@ -212,6 +213,17 @@ def validate(args, trainer, task, epoch_itr, subsets):
             meter = trainer.get_meter(k)
             if meter is not None:
                 meter.reset()
+
+        extra_meters = collections.defaultdict(lambda: AverageMeter())
+
+        for sample in progress:
+            log_output = trainer.valid_step(sample)
+
+            for k, v in log_output.items():
+                if k in ['loss', 'nll_loss', 'ntokens', 'nsentences', 'sample_size']:
+                    continue
+                extra_meters[k].update(v)
+
         # log validation stats
         stats = get_valid_stats(trainer)
         for k, meter in extra_meters.items():

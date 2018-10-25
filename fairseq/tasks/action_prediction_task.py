@@ -79,11 +79,6 @@ class ActionPredictionTask(FairseqTask):
 
     def build_model(self, args):
         model = super().build_model(args)
-
-        # for target in self.targets:
-        #     if target not in model.supported_targets:
-        #         raise ValueError('Unsupported language modeling target: {}'.format(target))
-
         return model
 
 
@@ -93,9 +88,6 @@ class ActionPredictionTask(FairseqTask):
         Args:
             split (str): name of the split (e.g., train, valid, test)
         """
-
-        print('split:', split)
-
         shuffle = False
         root_dir = self.args.data
         split_dir = os.path.join(root_dir, split)
@@ -104,6 +96,7 @@ class ActionPredictionTask(FairseqTask):
         loaded_datasets = []
         loaded_datasets.append(TrajectoryActionDataset(split_dir, num_input_points, shuffle))
         self.datasets[split] = TrajectoryActionDataset(split_dir, num_input_points, shuffle)
+        self.num_classes = self.datasets[split].num_classes()
 
 
     @property

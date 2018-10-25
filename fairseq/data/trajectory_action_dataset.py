@@ -9,9 +9,9 @@ class TrajectoryActionDataset(FairseqDataset):
 		self.num_input_points = num_input_points
 		self.shuffle = shuffle
 		self.all_filepaths = [a for (a, b, c) in os.walk(self.root_dir) if len(b) == 0]
-		self.valid_actions = []
+		self.valid_actions = set()
 		for path in self.all_filepaths:
-			self.valid_actions.append(path.split("/")[-2])
+			self.valid_actions.add(path.split("/")[-2])
 
 		self.action_labels = {}
 		for idx, action in enumerate(self.valid_actions):
@@ -23,9 +23,8 @@ class TrajectoryActionDataset(FairseqDataset):
 
 	def __getitem__(self, filepath_idx):
 		traj_array = np.zeros((self.num_input_points, 3))
-		target_array = np.zeros(self.num_input_points)
 		filepath = os.path.join(self.all_filepaths[filepath_idx], "skeleton.txt")
-
+		target = None
 		with open(filepath) as file:
 			file_contents = file.readlines()
 			if len(file_contents) >= self.num_input_points + 1:
@@ -33,12 +32,13 @@ class TrajectoryActionDataset(FairseqDataset):
 					traj_array[i, 0] = file_contents[i].split()[1]
 					traj_array[i, 1] = file_contents[i].split()[2]
 					traj_array[i, 2] = file_contents[i].split()[3]
-					target_array[i] = self.action_labels[filepath.split("/")[-3]]
+			target = self.action_labels[filepath.split("/")[-3]]
+		# print("Target array ", target)
 
 		return {
 			'id': filepath_idx,
 			'source': traj_array,
-			'target': target_array,
+			'target': target,
 		}
 
 	def collater(self, samples):
