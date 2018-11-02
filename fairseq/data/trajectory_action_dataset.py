@@ -27,8 +27,9 @@ class TrajectoryActionDataset(FairseqDataset):
 		target = None
 		with open(filepath) as file:
 			file_contents = file.readlines()
-			traj_array = np.zeros(min(len(file_contents), self.num_input_points))
-			for i in range(min(len(file_contents), self.num_input_points)):
+			traj_array_len = min(len(file_contents), self.num_input_points)
+			traj_array = np.zeros((traj_array_len, self.num_hand_points))
+			for i in range(self.num_input_points):
 				for idx in range(self.num_hand_points):
 					traj_array[i, idx] = file_contents[i].split()[idx]
 			target = self.action_labels[filepath.split("/")[-3]]
