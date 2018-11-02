@@ -29,11 +29,13 @@ class TrajectoryActionDataset(FairseqDataset):
 			file_contents = file.readlines()
 			traj_array_len = min(len(file_contents), self.num_input_points)
 			traj_array = np.zeros((traj_array_len, self.num_hand_points))
-			for i in range(self.num_input_points):
+			for i in range(traj_array_len):
 				for idx in range(self.num_hand_points):
+					print("Indices : ", i, " ", idx)
 					traj_array[i, idx] = file_contents[i].split()[idx]
 			target = self.action_labels[filepath.split("/")[-3]]
-
+		if target is None:
+			return {'id': None, 'source': None,'target' : None }
 		return {
 			'id': filepath_idx,
 			'source': traj_array,
@@ -41,10 +43,10 @@ class TrajectoryActionDataset(FairseqDataset):
 		}
 
 	def collater(self, samples):
-		ids = [sample['id'] for sample in samples]
-		src_tokens = [sample['source'] for sample in samples]
-		prev_output_tokens = [sample['target'] for sample in samples]
-		target = [sample['target'] for sample in samples]
+		ids = [sample['id'] for sample in samples if sample['id'] is not None]
+		src_tokens = [sample['source'] for sample in samples if sample['source'] is not None]
+		prev_output_tokens = [sample['target'] for sample in samples if sample['target'] is not None]
+		target = [sample['target'] for sample in samples if sample['target'] is not None]
 		return {"id": torch.LongTensor(ids),
 				"ntokens": self.num_input_points * len(samples),
 				"net_input": {"src_tokens": torch.LongTensor(src_tokens),

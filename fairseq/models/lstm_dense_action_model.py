@@ -90,7 +90,7 @@ class SimpleLSTMEncoder(FairseqEncoder):
 				args,
 				dictionary={},
 				hidden_dim=128, 
-				input_dim=3, 
+				input_dim=63, 
 				num_layers=1, 
 				dropout=0.0, 
 				use_bidirection=False, 
