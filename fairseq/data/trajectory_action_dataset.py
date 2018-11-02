@@ -23,16 +23,16 @@ class TrajectoryActionDataset(FairseqDataset):
 		return len(self.all_filepaths)
 
 	def __getitem__(self, filepath_idx):
-		traj_array = np.zeros((self.num_input_points, 50))
 		filepath = os.path.join(self.all_filepaths[filepath_idx], "skeleton.txt")
 		target = None
 		with open(filepath) as file:
 			file_contents = file.readlines()
-			for i in range(min(len(file_contents, self.num_input_points))):
+			traj_array = np.zeros(min(len(file_contents), self.num_input_points))
+			for i in range(min(len(file_contents), self.num_input_points)):
 				for idx in range(self.num_hand_points):
 					traj_array[i, idx] = file_contents[i].split()[idx]
 			target = self.action_labels[filepath.split("/")[-3]]
-			
+
 		return {
 			'id': filepath_idx,
 			'source': traj_array,
