@@ -70,6 +70,7 @@ class Trainer(object):
             self.meters['loss_scale'] = AverageMeter()  # dynamic loss scale
         self.meters['wall'] = TimeMeter()      # wall time in seconds
         self.meters['train_wall'] = StopwatchMeter()  # train wall time in seconds
+        self.meters['accuracy'] = AverageMeter()
 
 
     @property

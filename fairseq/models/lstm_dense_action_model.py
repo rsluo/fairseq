@@ -19,7 +19,7 @@ class LSTMDenseActionModel(BaseFairseqModel):
 
 	def forward(self, src_tokens, src_lengths, prev_output_tokens):
 			"""
-			Run the forward pass for an encoder-decoder model.
+			Run the forward pass for an encoder-dense model.
 
 			First feed a batch of source tokens through the encoder. Then, feed the
 			encoder output and previous decoder outputs (i.e., input feeding/teacher

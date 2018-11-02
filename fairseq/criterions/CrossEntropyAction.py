@@ -6,6 +6,7 @@
 # can be found in the PATENTS file in the same directory.
 
 import math
+import torch
 import torch.nn.functional as F
 
 from fairseq import utils
@@ -27,19 +28,21 @@ class CrossEntropyActionCriterion(FairseqCriterion):
         2) the sample size, which is used as the denominator for the gradient
         3) logging outputs to display while training
         """
-        actions, probs = model(**sample['net_input'])
+        out, probs = model(**sample['net_input'])
         target = model.get_targets(sample)
-        #target = target.view(target.size()[0]*target.size()[1], -1)
 
-        # loss = F.nll_loss(lprobs, target, size_average=False, ignore_index=self.padding_idx,
-        #                   reduce=reduce)
-        loss = F.cross_entropy(actions, target)
+        _, actions = torch.max(probs, dim=1)
+
+        loss = F.cross_entropy(out, target)
+        accuracy = sum(actions == target)
+        #print(" Actions ", actions, " Target ", target)
         sample_size = sample['target'].size(0)
         logging_output = {
             'loss': utils.item(loss.data) if reduce else loss.data,
             'ntokens': sample['ntokens'],
             'nsentences': sample['target'].size(0),
             'sample_size': sample_size,
+            'accuracy': accuracy
         }
         return loss, sample_size, logging_output
 
@@ -50,9 +53,11 @@ class CrossEntropyActionCriterion(FairseqCriterion):
         ntokens = sum(log.get('ntokens', 0) for log in logging_outputs)
         nsentences = sum(log.get('nsentences', 0) for log in logging_outputs)
         loss_sum = sum(log.get('loss', 0) for log in logging_outputs)
+        accuracy = sum(log.get('accuracy', 0) for log in logging_outputs)
         agg_output = {
             'ntokens': ntokens,
             'nsentences': nsentences,
-            'loss': loss_sum / sample_size / math.log(2)
+            'loss': loss_sum / sample_size / math.log(2),
+            'accuracy': accuracy / sample_size
         }
         return agg_output

@@ -97,9 +97,7 @@ def main(args):
 
         if epoch_itr.epoch % args.validate_interval == 0:
             valid_losses = validate(args, trainer, task, epoch_itr, valid_subsets)
-
-        # only use first validation loss to update the learning rate
-        #lr = trainer.lr_step(epoch_itr.epoch, valid_losses[0])
+            lr = trainer.lr_step(epoch_itr.epoch, valid_losses[0])
 
         # save checkpoint
         if epoch_itr.epoch % args.save_interval == 0:
@@ -179,6 +177,7 @@ def get_training_stats(trainer):
         stats['loss_scale'] = '{:.3f}'.format(trainer.get_meter('loss_scale').avg)
     stats['wall'] = round(trainer.get_meter('wall').elapsed_time)
     stats['train_wall'] = round(trainer.get_meter('train_wall').sum)
+    stats['accuracy'] = trainer.get_meter('accuracy').avg
     return stats
 
 
@@ -220,7 +219,7 @@ def validate(args, trainer, task, epoch_itr, subsets):
             log_output = trainer.valid_step(sample)
 
             for k, v in log_output.items():
-                if k in ['loss', 'nll_loss', 'ntokens', 'nsentences', 'sample_size']:
+                if k in ['loss', 'nll_loss', 'ntokens', 'nsentences', 'sample_size', 'accuracy']:
                     continue
                 extra_meters[k].update(v)
 
