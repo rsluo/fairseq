@@ -155,6 +155,7 @@ class SimpleLSTMEncoder(FairseqEncoder):
 		
 
 	def forward(self, inputs, lengths=None, return_attn=False):
+		print("Forward pass ", inputs.size())
 		_outputs, (final_hidden, _final_cell) = self.cell(inputs.float())
 		encoded = self.dense(final_hidden.squeeze(0))
 		return {'final_hidden': encoded}
