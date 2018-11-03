@@ -44,22 +44,22 @@ class LSTMDenseActionModel(BaseFairseqModel):
 			return encoder_out, probs
 	
 	def get_normalized_probs(self, net_output, log_probs, sample=None):
-        """Get normalized probabilities (or log probs) from a net's output."""
+		"""Get normalized probabilities (or log probs) from a net's output."""
 		if torch.is_tensor(net_output):
-            logits, _ = net_output.float()
-            if log_probs:
-                return F.log_softmax(logits, dim=-1)
-            else:
-                return F.softmax(logits, dim=-1)
-        raise NotImplementedError
+			logits, _ = net_output.float()
+			if log_probs:
+				return F.log_softmax(logits, dim=-1)
+			else:
+				return F.softmax(logits, dim=-1)
+		raise NotImplementedError
 
 	def max_positions(self):
 			"""Maximum length supported by the model."""
 			return (self.encoder.max_positions(), 1)
 	
 	def max_decoder_positions(self):
-        """Maximum length supported by the decoder."""
-        raise NotImplementedError
+		"""Maximum length supported by the decoder."""
+		raise NotImplementedError
 
 	@staticmethod
 	def add_args(parser):
