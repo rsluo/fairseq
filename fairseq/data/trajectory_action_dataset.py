@@ -14,7 +14,7 @@ class TrajectoryActionDataset(FairseqDataset):
 			self.valid_actions.add(path.split("/")[-2])
 
 		self.action_labels = {}
-		self.num_hand_points = 63
+		self.num_hand_points = 3
 		for idx, action in enumerate(self.valid_actions):
 			if action not in self.action_labels:
 				self.action_labels[action] = idx
@@ -35,7 +35,6 @@ class TrajectoryActionDataset(FairseqDataset):
 					traj_array[i, idx] = file_contents[i].split()[idx]
 			target = self.action_labels[filepath.split("/")[-3]]
 		if target is None:
-			print("Target is None")
 			return {'id': None, 'source': None,'target' : None }
 		return {
 			'id': filepath_idx,
@@ -50,10 +49,9 @@ class TrajectoryActionDataset(FairseqDataset):
 		#prev_output_tokens = [sample['target'] for sample in samples if sample['target'] is not None]
 		target = [sample['target'] for sample in samples if sample['target'] is not None]
 		net_input = {}
-		print(torch.FloatTensor(src_tokens).size())
 		net_input["src_tokens"] = torch.FloatTensor(src_tokens)
 		net_input["src_lengths"] = torch.LongTensor(np.ones(len(samples))*self.num_input_points)
-		print(net_input["src_tokens"].size())
+		
 		return {"id": torch.LongTensor(ids),
 				"ntokens": self.num_input_points * len(samples),
 				"net_input":net_input,

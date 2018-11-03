@@ -86,8 +86,7 @@ class LSTMDenseActionModel(BaseFairseqModel):
 		encoder = SimpleLSTMEncoder(
 			args=args,
 			hidden_dim=args.encoder_hidden_dim,
-			dropout=args.encoder_dropout,
-			input_dim = args.num_input_points
+			dropout=args.encoder_dropout
 		)
 		
 		model = LSTMDenseActionModel(encoder)
@@ -102,7 +101,7 @@ class SimpleLSTMEncoder(FairseqEncoder):
 				args,
 				dictionary={},
 				hidden_dim=128, 
-				input_dim=63, 
+				input_dim=3, 
 				num_layers=1, 
 				dropout=0.0, 
 				use_bidirection=False, 
