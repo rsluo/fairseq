@@ -9,7 +9,7 @@ from fairseq.models import register_model_architecture
 
 
 @register_model('lstm_dense_action_model')
-class LSTMDenseActionModel(nn.Module):
+class LSTMDenseActionModel(BaseFairseqModel):
 
 	def __init__(self, encoder):
 			super().__init__()
@@ -26,7 +26,6 @@ class LSTMDenseActionModel(nn.Module):
 			forcing) to the decoder to produce the next outputs::
 
 				encoder_out = self.encoder(src_tokens, src_lengths)
-				return self.softmax(encoder_out)
 
 			Args:
 				src_tokens (LongTensor): tokens in the source language of shape
@@ -43,42 +42,25 @@ class LSTMDenseActionModel(nn.Module):
 			_, actions = torch.max(probs, dim=1)
 			# print("Actions ", actions.size())
 			return encoder_out, probs
-
-	def load_state_dict(self, state_dict, strict=True):
-		"""Copies parameters and buffers from *state_dict* into this module and
-		its descendants.
-
-		Overrides the method in :class:`nn.Module`. Compared with that method
-		this additionally "upgrades" *state_dicts* from old checkpoints.
-		"""
-		self.upgrade_state_dict(state_dict)
-		super().load_state_dict(state_dict, strict)
 	
-	def upgrade_state_dict(self, state_dict):
-		"""Upgrade old state dicts to work with newer code."""
-		self.upgrade_state_dict_named(state_dict, '')
-
-	def upgrade_state_dict_named(self, state_dict, name):
-		assert state_dict is not None
-
-		def do_upgrade(m, prefix):
-			if len(prefix) > 0:
-				prefix += '.'
-
-			for n, c in m.named_children():
-				name = prefix + n
-				if hasattr(c, 'upgrade_state_dict_named'):
-					c.upgrade_state_dict_named(state_dict, name)
-				elif hasattr(c, 'upgrade_state_dict'):
-					c.upgrade_state_dict(state_dict)
-				do_upgrade(c, name)
-
-		do_upgrade(self, name)
+	def get_normalized_probs(self, net_output, log_probs, sample=None):
+        """Get normalized probabilities (or log probs) from a net's output."""
+		if torch.is_tensor(net_output):
+            logits, _ = net_output.float()
+            if log_probs:
+                return F.log_softmax(logits, dim=-1)
+            else:
+                return F.softmax(logits, dim=-1)
+        raise NotImplementedError
 
 	def max_positions(self):
 			"""Maximum length supported by the model."""
 			return (self.encoder.max_positions(), 1)
-			
+	
+	def max_decoder_positions(self):
+        """Maximum length supported by the decoder."""
+        raise NotImplementedError
+
 	@staticmethod
 	def add_args(parser):
 		# Models can override this method to add new command-line arguments.
