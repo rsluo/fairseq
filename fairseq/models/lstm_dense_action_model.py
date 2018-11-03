@@ -44,36 +44,36 @@ class LSTMDenseActionModel(nn.Module):
 			# print("Actions ", actions.size())
 			return encoder_out, probs
 
-    def load_state_dict(self, state_dict, strict=True):
-        """Copies parameters and buffers from *state_dict* into this module and
-        its descendants.
+	def load_state_dict(self, state_dict, strict=True):
+		"""Copies parameters and buffers from *state_dict* into this module and
+		its descendants.
 
-        Overrides the method in :class:`nn.Module`. Compared with that method
-        this additionally "upgrades" *state_dicts* from old checkpoints.
-        """
-        self.upgrade_state_dict(state_dict)
-        super().load_state_dict(state_dict, strict)
+		Overrides the method in :class:`nn.Module`. Compared with that method
+		this additionally "upgrades" *state_dicts* from old checkpoints.
+		"""
+		self.upgrade_state_dict(state_dict)
+		super().load_state_dict(state_dict, strict)
 	
 	def upgrade_state_dict(self, state_dict):
-        """Upgrade old state dicts to work with newer code."""
-        self.upgrade_state_dict_named(state_dict, '')
+		"""Upgrade old state dicts to work with newer code."""
+		self.upgrade_state_dict_named(state_dict, '')
 
-    def upgrade_state_dict_named(self, state_dict, name):
-        assert state_dict is not None
+	def upgrade_state_dict_named(self, state_dict, name):
+		assert state_dict is not None
 
-        def do_upgrade(m, prefix):
-            if len(prefix) > 0:
-                prefix += '.'
+		def do_upgrade(m, prefix):
+			if len(prefix) > 0:
+				prefix += '.'
 
-            for n, c in m.named_children():
-                name = prefix + n
-                if hasattr(c, 'upgrade_state_dict_named'):
-                    c.upgrade_state_dict_named(state_dict, name)
-                elif hasattr(c, 'upgrade_state_dict'):
-                    c.upgrade_state_dict(state_dict)
-                do_upgrade(c, name)
+			for n, c in m.named_children():
+				name = prefix + n
+				if hasattr(c, 'upgrade_state_dict_named'):
+					c.upgrade_state_dict_named(state_dict, name)
+				elif hasattr(c, 'upgrade_state_dict'):
+					c.upgrade_state_dict(state_dict)
+				do_upgrade(c, name)
 
-        do_upgrade(self, name)
+		do_upgrade(self, name)
 
 	def max_positions(self):
 			"""Maximum length supported by the model."""
