@@ -109,7 +109,10 @@ class SimpleLSTMEncoder(FairseqEncoder):
 				cell_type='LSTM', 
 				use_cuda=True, 
 				max_length=784,
-				out_classses = 45   # Hardcoding; number of classes present in the current dataset
+				out_classses = 46   
+				# Hardcoding; number of classes present in the current dataset
+				# 0 represents an unknown action - \
+				# model should output this when it doesn't know what to do
 			):
 		super().__init__(dictionary)
 		self.args = args

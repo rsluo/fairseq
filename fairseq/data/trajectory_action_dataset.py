@@ -24,18 +24,17 @@ class TrajectoryActionDataset(FairseqDataset):
 
 	def __getitem__(self, filepath_idx):
 		filepath = os.path.join(self.all_filepaths[filepath_idx], "skeleton.txt")
-		target = None
+		target = 0 ## Keeping a default target + 45 actions which makes 46 total actions
+					# 0 is an unknown action that model outputs when it doesn't know what to do
+		traj_array = np.zeros((self.num_input_points, self.num_hand_points))
 		with open(filepath) as file:
 			file_contents = file.readlines()
 			traj_array_len = min(len(file_contents), self.num_input_points)
 			traj_array = np.zeros((traj_array_len, self.num_hand_points))
 			for i in range(traj_array_len):
 				for idx in range(self.num_hand_points):
-					#print("Indices : ", i, " ", idx)
 					traj_array[i, idx] = file_contents[i].split()[idx]
 			target = self.action_labels[filepath.split("/")[-3]]
-		if target is None:
-			return {'id': None, 'source': None,'target' : None }
 		return {
 			'id': filepath_idx,
 			'source': traj_array,
