@@ -97,12 +97,12 @@ def main(args):
 
         if epoch_itr.epoch % args.validate_interval == 0:
             valid_losses = validate(args, trainer, task, epoch_itr, valid_subsets)
-            lr = trainer.lr_step(epoch_itr.epoch, valid_losses[0])
+            #lr = trainer.lr_step(epoch_itr.epoch, valid_losses[0])
 
         # save checkpoint
         if epoch_itr.epoch % args.save_interval == 0:
             save_checkpoint(args, trainer, epoch_itr, valid_losses[0])
-        print(lr, " ",args.min_lr, " ", epoch_itr.epoch, " ", trainer.get_num_updates(), " ", max_update)
+        #print(lr, " ",args.min_lr, " ", epoch_itr.epoch, " ", trainer.get_num_updates(), " ", max_update)
     train_meter.stop()
     print('| done training in {:.1f} seconds'.format(train_meter.sum))
 
