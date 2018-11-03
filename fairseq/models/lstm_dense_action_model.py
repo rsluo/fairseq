@@ -9,7 +9,7 @@ from fairseq.models import register_model_architecture
 
 
 @register_model('lstm_dense_action_model')
-class LSTMDenseActionModel(BaseFairseqModel):
+class LSTMDenseActionModel(nn.Module):
 
 	def __init__(self, encoder):
 			super().__init__()
@@ -17,7 +17,7 @@ class LSTMDenseActionModel(BaseFairseqModel):
 			self.encoder = encoder
 			assert isinstance(self.encoder, FairseqEncoder)
 
-	def forward(self, src_tokens, src_lengths, prev_output_tokens):
+	def forward(self, src_tokens, src_lengths):
 			"""
 			Run the forward pass for an encoder-dense model.
 
@@ -26,14 +26,12 @@ class LSTMDenseActionModel(BaseFairseqModel):
 			forcing) to the decoder to produce the next outputs::
 
 				encoder_out = self.encoder(src_tokens, src_lengths)
-				return self.decoder(prev_output_tokens, encoder_out)
+				return self.softmax(encoder_out)
 
 			Args:
 				src_tokens (LongTensor): tokens in the source language of shape
 					`(batch, src_len)`
 				src_lengths (LongTensor): source sentence lengths of shape `(batch)`
-				prev_output_tokens (LongTensor): previous decoder outputs of shape
-					`(batch, tgt_len)`, for input feeding/teacher forcing
 
 			Returns:
 				the decoder's output, typically of shape `(batch, tgt_len, vocab)`
@@ -45,6 +43,37 @@ class LSTMDenseActionModel(BaseFairseqModel):
 			_, actions = torch.max(probs, dim=1)
 			# print("Actions ", actions.size())
 			return encoder_out, probs
+
+    def load_state_dict(self, state_dict, strict=True):
+        """Copies parameters and buffers from *state_dict* into this module and
+        its descendants.
+
+        Overrides the method in :class:`nn.Module`. Compared with that method
+        this additionally "upgrades" *state_dicts* from old checkpoints.
+        """
+        self.upgrade_state_dict(state_dict)
+        super().load_state_dict(state_dict, strict)
+	
+	def upgrade_state_dict(self, state_dict):
+        """Upgrade old state dicts to work with newer code."""
+        self.upgrade_state_dict_named(state_dict, '')
+
+    def upgrade_state_dict_named(self, state_dict, name):
+        assert state_dict is not None
+
+        def do_upgrade(m, prefix):
+            if len(prefix) > 0:
+                prefix += '.'
+
+            for n, c in m.named_children():
+                name = prefix + n
+                if hasattr(c, 'upgrade_state_dict_named'):
+                    c.upgrade_state_dict_named(state_dict, name)
+                elif hasattr(c, 'upgrade_state_dict'):
+                    c.upgrade_state_dict(state_dict)
+                do_upgrade(c, name)
+
+        do_upgrade(self, name)
 
 	def max_positions(self):
 			"""Maximum length supported by the model."""
