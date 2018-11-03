@@ -87,6 +87,7 @@ class LSTMDenseActionModel(BaseFairseqModel):
 			args=args,
 			hidden_dim=args.encoder_hidden_dim,
 			dropout=args.encoder_dropout,
+			input_dim = args.num_input_points
 		)
 		
 		model = LSTMDenseActionModel(encoder)
