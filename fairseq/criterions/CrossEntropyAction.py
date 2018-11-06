@@ -34,30 +34,33 @@ class CrossEntropyActionCriterion(FairseqCriterion):
         _, actions = torch.max(probs, dim=1)
 
         loss = F.cross_entropy(out, target)
-        accuracy = sum(actions == target)
-        #print(" Actions ", actions, " Target ", target)
+        accuracy = torch.sum(torch.eq(actions, target)).cpu().numpy()
+        #print(" Actions ", actions.size(), " Target ", target.size())
         sample_size = sample['target'].size(0)
         logging_output = {
             'loss': utils.item(loss.data) if reduce else loss.data,
             'ntokens': sample['ntokens'],
             'nsentences': sample['target'].size(0),
             'sample_size': sample_size,
-            'accuracy': accuracy
+            'accuracy': accuracy/float(sample_size)
         }
         return loss, sample_size, logging_output
 
     @staticmethod
     def aggregate_logging_outputs(logging_outputs):
         """Aggregate logging outputs from data parallel training."""
+        acc = 0
+        for log in logging_outputs:
+            acc += log['accuracy']
         sample_size = sum(log.get('sample_size', 0) for log in logging_outputs)
         ntokens = sum(log.get('ntokens', 0) for log in logging_outputs)
         nsentences = sum(log.get('nsentences', 0) for log in logging_outputs)
         loss_sum = sum(log.get('loss', 0) for log in logging_outputs)
-        accuracy = sum(log.get('accuracy', 0) for log in logging_outputs)
+        accuracy = acc #sum(log['accuracy'] for log in logging_outputs)
         agg_output = {
             'ntokens': ntokens,
             'nsentences': nsentences,
             'loss': loss_sum / sample_size / math.log(2),
-            'accuracy': accuracy / sample_size
+            'accuracy': accuracy
         }
         return agg_output

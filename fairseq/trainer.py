@@ -244,6 +244,7 @@ class Trainer(object):
             # update meters
             ntokens = logging_output.get('ntokens', 0)
             nsentences = logging_output.get('nsentences', 0)
+            accuracy = logging_output.get('accuracy', 0)
             self.meters['wps'].update(ntokens)
             self.meters['ups'].update(1.)
             self.meters['wpb'].update(ntokens)
@@ -256,6 +257,7 @@ class Trainer(object):
             self.meters['train_loss'].update(logging_output.get('loss', 0), sample_size)
             if 'nll_loss' in logging_output:
                 self.meters['train_nll_loss'].update(logging_output.get('nll_loss', 0), ntokens)
+            self.meters['accuracy'].update(accuracy)
         except OverflowError as e:
             print('| WARNING: overflow detected, ' + str(e))
             self.zero_grad()
@@ -319,7 +321,7 @@ class Trainer(object):
         self.meters['valid_loss'].update(logging_output.get('loss', 0), sample_size)
         if 'nll_loss' in logging_output:
             self.meters['valid_nll_loss'].update(logging_output.get('nll_loss', 0), ntokens)
-
+        self.meters['accuracy'].update(logging_output.get('accuracy', 0))
         return logging_output
 
     def dummy_train_step(self, dummy_batch):

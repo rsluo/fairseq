@@ -152,7 +152,7 @@ def train(args, trainer, task, epoch_itr):
 
     # reset training meters
     for k in [
-        'train_loss', 'train_nll_loss', 'bsz', 'gnorm', 'clip',
+        'accuracy','train_loss', 'train_nll_loss', 'bsz', 'gnorm', 'clip',
     ]:
         meter = trainer.get_meter(k)
         if meter is not None:
@@ -208,7 +208,7 @@ def validate(args, trainer, task, epoch_itr, subsets):
         )
 
         # reset validation loss meters
-        for k in ['valid_loss', 'valid_nll_loss']:
+        for k in ['valid_loss', 'valid_nll_loss', 'accuracy']:
             meter = trainer.get_meter(k)
             if meter is not None:
                 meter.reset()
@@ -242,6 +242,8 @@ def get_valid_stats(trainer):
     else:
         nll_loss = trainer.get_meter('valid_loss').avg
     stats['num_updates'] = trainer.get_num_updates()
+    stats['accuracy'] = trainer.get_meter('accuracy').avg
+    #import pdb; pdb.set_trace()
     if hasattr(save_checkpoint, 'best'):
         stats['best'] = min(save_checkpoint.best, stats['valid_loss'])
     return stats
