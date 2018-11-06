@@ -35,7 +35,9 @@ class LSTMDenseActionModel(BaseFairseqModel):
 			Returns:
 				the decoder's output, typically of shape `(batch, tgt_len, vocab)`
 			"""
-			encoder_out = self.encoder(src_tokens, src_lengths)['final_hidden']
+			packed = nn.utils.rnn.pack_padded_sequence(src_tokens, src_lengths, batch_first=True)
+			encoder_out = self.encoder(packed, src_lengths)['final_hidden']
+			
 #			print("Encoder output ", encoder_out.size())
 			probs = F.softmax(encoder_out, dim=-1)
 #			print("Probs ", probs.size())
