@@ -15,6 +15,7 @@ from .monolingual_dataset import MonolingualDataset
 from .token_block_dataset import TokenBlockDataset
 from .trajectory_dataset import TrajectoryDataset
 from .trajectory_action_dataset import TrajectoryActionDataset
+from .traj_action_temporal_dataset import TrajectoryActionTemporalDataset
 from .iterators import (
     CountingIterator,
     EpochBatchIterator,
@@ -39,5 +40,6 @@ __all__ = [
     'ShardedIterator',
     'TokenBlockDataset',
     'TrajectoryDataset',
-    'TrajectoryActionDataset'
+    'TrajectoryActionDataset',
+    'TrajectoryActionTemporalDataset'
 ]

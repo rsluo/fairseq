@@ -8,7 +8,7 @@ from fairseq.models import BaseFairseqModel, register_model
 from fairseq.models import register_model_architecture
 
 
-@register_model('lstm_dense_action_model')
+@register_model('lstm_dense_action_model_v2')
 class LSTMDenseActionModel(BaseFairseqModel):
 
 	def __init__(self, encoder):
@@ -35,16 +35,13 @@ class LSTMDenseActionModel(BaseFairseqModel):
 			Returns:
 				the decoder's output, typically of shape `(batch, tgt_len, vocab)`
 			"""
-			#print(src_lengths)
+			# print(src_tokens.size())
+			# print(src_lengths)
 			packed = nn.utils.rnn.pack_padded_sequence(src_tokens, src_lengths, batch_first=True)
 			encoder_out = self.encoder(packed, src_lengths)['final_hidden']
 			
-#			print("Encoder output ", encoder_out.size())
-			probs = F.softmax(encoder_out, dim=-1)
-#			print("Probs ", probs.size())
-			_, actions = torch.max(probs, dim=1)
-			# print("Actions ", actions.size())
-			return encoder_out, probs
+			#probs = F.softmax(encoder_out, dim=-1)
+			return encoder_out
 	
 	def get_normalized_probs(self, net_output, log_probs, sample=None):
 		"""Get normalized probabilities (or log probs) from a net's output."""
@@ -103,15 +100,14 @@ class SimpleLSTMEncoder(FairseqEncoder):
 	def __init__(self, 
 				args,
 				dictionary={},
-				hidden_dim=128, 
+				hidden_dim=256, 
 				input_dim=63, 
-				num_layers=1, 
+				num_layers=2, 
 				dropout=0.0, 
 				use_bidirection=False, 
 				use_attention=False, 
 				cell_type='LSTM', 
-				use_cuda=True, 
-				max_length=784,
+				use_cuda=True,
 				out_classses = 46   
 				# Hardcoding; number of classes present in the current dataset
 				# 0 represents an unknown action - \
@@ -150,8 +146,8 @@ class SimpleLSTMEncoder(FairseqEncoder):
 		else:
 			self.baseline = nn.Linear(input_dim, hidden_dim)
 
-		self.dense = nn.Linear(hidden_dim, out_classses)
-
+		self.dense1 = nn.Linear(hidden_dim, 128)
+		self.dense2 = nn.Linear(128, out_classses)
 		# ### #
 		# use_attention = False ###### TODO Setting this to false to obtain a good baseline #####
 		# if use_attention:
@@ -163,7 +159,8 @@ class SimpleLSTMEncoder(FairseqEncoder):
 	def forward(self, inputs, lengths=None, return_attn=False):
 		#print("Forward pass ", inputs.size())
 		_outputs, (final_hidden, _final_cell) = self.cell(inputs.float())
-		encoded = self.dense(final_hidden.squeeze(0))
+		encoded = self.dense1(final_hidden[-1].squeeze(0))
+		encoded = self.dense2(encoded)
 		return {'final_hidden': encoded}
 
 	def reorder_encoder_out(self, encoder_out, new_order):
@@ -183,7 +180,7 @@ class SimpleLSTMEncoder(FairseqEncoder):
 			'final_hidden': final_hidden.index_select(0, new_order),
 		}
 
-@register_model_architecture('lstm_dense_action_model', 'lstm_dense_am')
+@register_model_architecture('lstm_dense_action_model_v2', 'bi_lstm_dense_am')
 def tutorial_simple_lstm(args):
 	args.encoder_hidden_dim = getattr(args, 'encoder_hidden_dim', 256)
 

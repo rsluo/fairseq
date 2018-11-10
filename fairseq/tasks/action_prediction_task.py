@@ -12,7 +12,7 @@ import os
 
 from fairseq.data import (
     Dictionary, IndexedInMemoryDataset, IndexedRawTextDataset,
-    MonolingualDataset, TokenBlockDataset, TruncatedDictionary, TrajectoryActionDataset
+    MonolingualDataset, TokenBlockDataset, TruncatedDictionary, TrajectoryActionTemporalDataset
 )
 from fairseq.tasks import FairseqTask, register_task
 
@@ -94,8 +94,8 @@ class ActionPredictionTask(FairseqTask):
         num_input_points = self.args.num_input_points
 
         loaded_datasets = []
-        loaded_datasets.append(TrajectoryActionDataset(split_dir, num_input_points, shuffle))
-        self.datasets[split] = TrajectoryActionDataset(split_dir, num_input_points, shuffle)
+        loaded_datasets.append(TrajectoryActionTemporalDataset(split_dir, num_input_points, shuffle))
+        self.datasets[split] = TrajectoryActionTemporalDataset(split_dir, num_input_points, shuffle)
         self.num_classes = self.datasets[split].num_classes()
 
 

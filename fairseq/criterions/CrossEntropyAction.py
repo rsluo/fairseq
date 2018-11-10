@@ -28,14 +28,14 @@ class CrossEntropyActionCriterion(FairseqCriterion):
         2) the sample size, which is used as the denominator for the gradient
         3) logging outputs to display while training
         """
-        out, probs = model(**sample['net_input'])
+        out = model(**sample['net_input'])
         target = model.get_targets(sample)
 
-        _, actions = torch.max(probs, dim=1)
+        _, actions = torch.max(F.softmax(out, dim=1), dim=1)
 
         loss = F.cross_entropy(out, target)
         accuracy = torch.sum(torch.eq(actions, target)).cpu().numpy()
-        #print(" Actions ", actions.size(), " Target ", target.size())
+        #print(" Actions ", actions, " Target ", target)
         sample_size = sample['target'].size(0)
         logging_output = {
             'loss': utils.item(loss.data) if reduce else loss.data,
