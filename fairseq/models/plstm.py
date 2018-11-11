@@ -55,7 +55,7 @@ class pLSTMMemUnit(nn.Module):
 		"""
 		ip = F.sigmoid(self.Wpii(xt) + self.Wpih(prev_ht))
 		fp = F.sigmoid(self.Wpfi(xt) + self.Wpfh(prev_ht))
-		gp = F.sigmoid(self.Wpgi(xt) + self.Wpgh(prev_ht))
+		gp = F.tanh(self.Wpgi(xt) + self.Wpgh(prev_ht))
 
 		ct = fp * prev_ct + ip * gp
 		return ct
