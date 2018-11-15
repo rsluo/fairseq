@@ -14,8 +14,8 @@ from fairseq import utils
 from . import FairseqCriterion, register_criterion
 
 
-@register_criterion('cross_entropy_action')
-class CrossEntropyActionCriterion(FairseqCriterion):
+@register_criterion('cross_entropy_per_time_action')
+class CrossEntropyPerTimeActionCriterion(FairseqCriterion):
 
     def __init__(self, args, task):
         super().__init__(args, task)
@@ -31,9 +31,9 @@ class CrossEntropyActionCriterion(FairseqCriterion):
         out = model(**sample['net_input'])
         target = model.get_targets(sample)
 
-        _, actions = torch.max(F.softmax(out, dim=1), dim=1)
-
         loss = F.cross_entropy(out, target, ignore_index=45)
+
+        _, actions = torch.max(F.softmax(out, dim=1), dim=1)
         accuracy = torch.sum(torch.eq(actions, target)).cpu().numpy()
         #print(" Actions ", actions, " Target ", target)
         sample_size = sample['target'].size(0)
@@ -42,7 +42,7 @@ class CrossEntropyActionCriterion(FairseqCriterion):
             'ntokens': sample['ntokens'],
             'nsentences': sample['target'].size(0),
             'sample_size': sample_size,
-            'accuracy': accuracy/float(sample_size)
+            'accuracy': accuracy/float(sample_size*target.size(1))
         }
         return loss, sample_size, logging_output
 
@@ -56,7 +56,7 @@ class CrossEntropyActionCriterion(FairseqCriterion):
         ntokens = sum(log.get('ntokens', 0) for log in logging_outputs)
         nsentences = sum(log.get('nsentences', 0) for log in logging_outputs)
         loss_sum = sum(log.get('loss', 0) for log in logging_outputs)
-        accuracy = acc #sum(log['accuracy'] for log in logging_outputs)
+        accuracy = acc 
         agg_output = {
             'ntokens': ntokens,
             'nsentences': nsentences,

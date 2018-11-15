@@ -12,13 +12,13 @@ import os
 
 from fairseq.data import (
     Dictionary, IndexedInMemoryDataset, IndexedRawTextDataset,
-    MonolingualDataset, TokenBlockDataset, TruncatedDictionary, TrajectoryActionTemporalDataset, TrajectoryActionDataset
+    MonolingualDataset, TokenBlockDataset, TruncatedDictionary, TrajectoryActionTimestepDataset
 )
 from fairseq.tasks import FairseqTask, register_task
 
 
-@register_task('action_prediction')
-class ActionPredictionTask(FairseqTask):
+@register_task('action_prediction_per_time')
+class ActionPredictionPerTimestepTask(FairseqTask):
     """
     Train an action prediction model.
 
@@ -96,9 +96,9 @@ class ActionPredictionTask(FairseqTask):
         num_input_points = self.args.num_input_points
 
         loaded_datasets = []
-        loaded_datasets.append(TrajectoryActionTemporalDataset(split_dir, num_input_points, shuffle))
+        loaded_datasets.append(TrajectoryActionTimestepDataset(split_dir, num_input_points, shuffle))
         
-        self.datasets[split] = TrajectoryActionTemporalDataset(split_dir, num_input_points, shuffle)
+        self.datasets[split] = TrajectoryActionTimestepDataset(split_dir, num_input_points, shuffle)
         self.num_classes = self.datasets[split].num_classes()
 
 

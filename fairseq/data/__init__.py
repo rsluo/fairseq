@@ -16,6 +16,8 @@ from .token_block_dataset import TokenBlockDataset
 from .trajectory_dataset import TrajectoryDataset
 from .trajectory_action_dataset import TrajectoryActionDataset
 from .traj_action_temporal_dataset import TrajectoryActionTemporalDataset
+from .traj_action_per_timestep_dataset import TrajectoryActionTimestepDataset
+
 from .iterators import (
     CountingIterator,
     EpochBatchIterator,
@@ -41,5 +43,6 @@ __all__ = [
     'TokenBlockDataset',
     'TrajectoryDataset',
     'TrajectoryActionDataset',
-    'TrajectoryActionTemporalDataset'
+    'TrajectoryActionTemporalDataset',
+    'TrajectoryActionTimestepDataset'
 ]

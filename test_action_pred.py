@@ -4,7 +4,6 @@ import os
 import math
 import torch
 import numpy as np
-import seaborn as sn
 import matplotlib
 matplotlib.use('Agg')
 
@@ -49,22 +48,45 @@ def main(args):
 
     action_labels = task.datasets['valid'].load_config()
 
-    for i in range(45):
-        conf_mat.append(np.zeros(45))
+    for i in range(46):
+        conf_mat.append(np.zeros(46))
 
     accuracy = 0
+    length = 0
     for t, x in enumerate(loader):
         model.cuda()
+        
+        ordered = sorted(x['source'], key=len, reverse=True)
+        seq_lengths = sorted(x['length'], reverse=True)
 
+        padded = [
+            np.pad(li, pad_width=((0, self.window_size-len(li)), (0, 0)), mode='constant')
+            for li in ordered
+        ]
         out = model(x['source'].cuda(), x['length'].cuda())
         _, actions = torch.max(out, dim=1)
 
-        accuracy += torch.sum(torch.eq(actions, x['target'].cuda()))
+        #yticks = torch.eq(actions, x['target'].cuda())
+        # yticks = actions.cpu().numpy()
+        # xticks = np.arange(actions.size(0))
 
+        # plt.plot(xticks, yticks)
+        # plt.xlabel("Timesteps")
+        # plt.ylabel("Prediction")
+        # name = args.filepath.split("/")[-3]
+        # plt.title(name + " " + str(x['target'][0].cpu().numpy()))
+        # plt.savefig(str(name) + ".jpg")
+
+        # print("Predictions")
+        # print(actions)
+        # print("Target")
+        # print(x['target'])
+        accuracy += torch.sum(torch.eq(actions, x['target'].cuda()))
+        length += actions.size(0)
         compute_per_class_accuracy(actions.cpu().numpy(), x['target'].cpu().numpy(), action_labels)
 
     print(accuracy)
-    print(accuracy/len(loader))
+    print(float(accuracy)/float(length))
 
     id2labels = { v: k for k,v in action_labels.items()}
 
@@ -77,10 +99,10 @@ def main(args):
         acc = acc_counts[k]/float(denom)
         print("%s  - accuracy %.4f" % (id2labels[k], acc))
     
-    for t in range(45):
-        for p in range(45):
-            print("%d " % conf_mat[t][p], end="")
-        print("\n") 
+    # for t in range(45):
+    #     for p in range(45):
+    #         print("%d " % conf_mat[t][p], end="")
+    #     print("\n") 
 
     plt.matshow(conf_mat)
     plt.title("Confusion matrix - Test data")
@@ -103,18 +125,7 @@ def compute_per_class_accuracy(actions, target, action_labels):
             if t in acc_counts:
                 acc_counts[t] += 1
             else:
-                acc_counts[t] = 1
-
-    # id2labels = { v: k for k,v in action_labels.items()}
-
-    # print("---Per class accuracy---")
-
-    # for k in range(45): # Total actions are 45
-    #     denom = label_counts[k]
-    #     if denom == 0:
-    #         denom = 1
-    #     acc = acc_counts[k]/float(denom)
-    #     print("Class %s Accuracy %.4f" % (id2labels[k], acc))
+                acc_counts[t] = 1  
 
 def load_checkpoint(args, model):
     """Load a checkpoint and replay dataloader to match."""

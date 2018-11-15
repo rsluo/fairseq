@@ -37,8 +37,7 @@ class LSTMDenseActionModel(BaseFairseqModel):
 			"""
 			# print(src_tokens.size())
 			# print(src_lengths)
-			packed = nn.utils.rnn.pack_padded_sequence(src_tokens, src_lengths, batch_first=True)
-			encoder_out = self.encoder(packed, src_lengths)['final_hidden']
+			encoder_out = self.encoder(src_tokens, src_lengths)['final_hidden']
 			
 			#probs = F.softmax(encoder_out, dim=-1)
 			return encoder_out
@@ -100,7 +99,7 @@ class SimpleLSTMEncoder(FairseqEncoder):
 	def __init__(self, 
 				args,
 				dictionary={},
-				hidden_dim=256, 
+				hidden_dim=100, 
 				input_dim=63, 
 				num_layers=2, 
 				dropout=0.0, 
@@ -146,21 +145,17 @@ class SimpleLSTMEncoder(FairseqEncoder):
 		else:
 			self.baseline = nn.Linear(input_dim, hidden_dim)
 
-		self.dense1 = nn.Linear(hidden_dim, 128)
-		self.dense2 = nn.Linear(128, out_classses)
-		# ### #
-		# use_attention = False ###### TODO Setting this to false to obtain a good baseline #####
-		# if use_attention:
-		# 	self.attn = nn.Linear((2 if use_bidirection else 1) * hidden_dim, 1)
-		# 	self.attn_softmax = nn.Softmax(dim=1)
-
-		
+		self.dense1 = nn.Linear(hidden_dim, out_classses)
 
 	def forward(self, inputs, lengths=None, return_attn=False):
 		#print("Forward pass ", inputs.size())
-		_outputs, (final_hidden, _final_cell) = self.cell(inputs.float())
+		packed = nn.utils.rnn.pack_padded_sequence(inputs, lengths, batch_first=True)
+		_outputs, (final_hidden, _final_cell) = self.cell(packed.float())
+		_outputs, _ = torch.nn.utils.rnn.pad_packed_sequence(_outputs, batch_first=True)
+		# print(_outputs.size())
+		# print(_outputs[:,-1,:].size())
 		encoded = self.dense1(final_hidden[-1].squeeze(0))
-		encoded = self.dense2(encoded)
+		# encoded = self.dense2(encoded)
 		return {'final_hidden': encoded}
 
 	def reorder_encoder_out(self, encoder_out, new_order):

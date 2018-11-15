@@ -8,6 +8,8 @@ from fairseq.models import BaseFairseqModel, register_model
 from fairseq.models import register_model_architecture
 from .plstm import pLSTM
 
+import numpy as np
+
 @register_model('plstm_dense_action_model')
 class pLSTMDenseActionModel(BaseFairseqModel):
 
@@ -35,16 +37,8 @@ class pLSTMDenseActionModel(BaseFairseqModel):
 			Returns:
 				the decoder's output, typically of shape `(batch, tgt_len, vocab)`
 			"""
-			#print(src_lengths)
-			packed = nn.utils.rnn.pack_padded_sequence(src_tokens, src_lengths, batch_first=True)
-			encoder_out = self.encoder(packed, src_lengths)['final_hidden']
-			
-#			print("Encoder output ", encoder_out.size())
-			probs = F.softmax(encoder_out, dim=-1)
-#			print("Probs ", probs.size())
-			_, actions = torch.max(probs, dim=1)
-			# print("Actions ", actions.size())
-			return encoder_out, probs
+			encoder_out = self.encoder(src_tokens, src_lengths)['final_hidden']
+			return encoder_out
 	
 	def get_normalized_probs(self, net_output, log_probs, sample=None):
 		"""Get normalized probabilities (or log probs) from a net's output."""
@@ -103,7 +97,7 @@ class SimpleLSTMEncoder(FairseqEncoder):
 	def __init__(self, 
 				args,
 				dictionary={},
-				hidden_dim=128, 
+				hidden_dim=32*5, 
 				input_dim=63, 
 				num_layers=1, 
 				dropout=0.0, 
@@ -126,15 +120,46 @@ class SimpleLSTMEncoder(FairseqEncoder):
 		self.use_attention = use_attention
 		self.use_bidirection = use_bidirection
 		self.cell_type = cell_type
-		elif cell_type == 'pLSTM':
+
+		self.num_parts = 5
+		### We have 21 total 3D points 
+		###	- 4 points per finger 
+		### - 1 point for wrist
+		### - 5 points per part = 15 dimensional vector 
+		### create pLSTMMemUnit for each of the fingers
+		### This code assumes that these points are 3D
+
+		self.part_indices = {
+								"1" : [0,1,6,7,8],
+								"2" : [0,2,9,10,11],
+								"3" : [0,3,12,13,14],
+								"4" : [0,4,15,16,17],
+								"5" : [0,5,18,19,20]
+							}
+		self.part_idx_vals = {}
+		for k in self.part_indices.keys():
+			self.part_idx_vals[k] = [3*n+i for n in self.part_indices[k] for i in range(3)]
+
+		self.part_indices_hidden = {}
+		for idx, i in enumerate(range(0, hidden_dim*5, hidden_dim)):
+			self.part_indices_hidden[str(idx+1)] = np.arange(i, i+hidden_dim) 
+
+		# print(self.part_indices_hidden)
+
+		if cell_type == 'pLSTM':
 			self.cell = pLSTM(input_size=input_dim,
 							   hidden_size=hidden_dim,
-							   num_layers=num_layers,
-							   batch_first=True)
+							   batch_first=True, part_idx_vals=self.part_idx_vals, part_input_size=15)
+			# self.cell2 = pLSTM(input_size= hidden_dim,
+			# 				   hidden_size=hidden_dim,
+			# 				   batch_first=True, part_idx_vals=self.part_indices_hidden, part_input_size=hidden_dim)
 		else:
 			self.baseline = nn.Linear(input_dim, hidden_dim)
 
-		self.dense = nn.Linear(hidden_dim, out_classses)
+		# self.dense = nn.Linear(hidden_dim*5, 128)
+		# self.dense2 = nn.Linear(128, out_classses)
+
+		self.dense = nn.Linear(hidden_dim*5, out_classses)
 
 		# ### #
 		# use_attention = False ###### TODO Setting this to false to obtain a good baseline #####
@@ -147,7 +172,8 @@ class SimpleLSTMEncoder(FairseqEncoder):
 	def forward(self, inputs, lengths=None, return_attn=False):
 		#print("Forward pass ", inputs.size())
 		_outputs, (final_hidden, _final_cell) = self.cell(inputs.float())
-		encoded = self.dense(final_hidden.squeeze(0))
+		# _outputs, (final_hidden, _final_cell) = self.cell2(_outputs)
+		encoded = self.dense(final_hidden)
 		return {'final_hidden': encoded}
 
 	def reorder_encoder_out(self, encoder_out, new_order):
@@ -169,6 +195,6 @@ class SimpleLSTMEncoder(FairseqEncoder):
 
 @register_model_architecture('plstm_dense_action_model', 'plstm_dense_am')
 def tutorial_simple_lstm(args):
-	args.encoder_hidden_dim = getattr(args, 'encoder_hidden_dim', 256)
+	args.encoder_hidden_dim = getattr(args, 'encoder_hidden_dim', 32)
 
 

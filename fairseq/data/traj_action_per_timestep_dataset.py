@@ -4,7 +4,7 @@ import os
 from . import FairseqDataset
 import collections
 
-class TrajectoryActionTemporalDataset(FairseqDataset):
+class TrajectoryActionTimestepDataset(FairseqDataset):
 	def __init__(self, root_dir, window_size, shuffle, test_action=None, action_file=None, use_benchmark_data=True):
 		self.root_dir = root_dir
 		self.window_size = window_size
@@ -60,8 +60,6 @@ class TrajectoryActionTemporalDataset(FairseqDataset):
 			action =  self.action_labels[filepath.split("/")[-3]]
 			
 			with open(filepath) as file:
-				# import pdb
-				# pdb.set_trace()
 
 				file_contents = file.readlines()
 				if len(file_contents) > 0 and (test_action is None or action == test_action):
@@ -86,20 +84,6 @@ class TrajectoryActionTemporalDataset(FairseqDataset):
 						gid +=1
 
 					fid +=1
-					# if len(file_contents) < window_size: # Window size is 50
-					# 	self.smaller.add(fid-1)
-					# 	action =  filepath.split("/")[-3]
-					# 	if action in self.smaller_actions:
-					# 		self.smaller_actions[action] += 1
-					# 	else:
-					# 		self.smaller_actions[action] = 1
-
-					# if action in self.total_actions:
-					# 	self.total_actions[action] += 1
-					# 	self.action_lens[action] += len(file_contents)
-					# else:
-					# 	self.total_actions[action] = 1
-					# 	self.action_lens[action] = len(file_contents)
 
 			if action_file is not None:
 				break
@@ -107,17 +91,8 @@ class TrajectoryActionTemporalDataset(FairseqDataset):
 		self.max_len = max_len
 		self.total_len = gid
 
-		# action_percent_count = {}
-
-		# for action in self.total_actions.keys():
-		# 	action_percent_count[action] = self.smaller_actions[action]*100/self.total_actions[action]
-		# 	print(action + "," + str(action_percent_count[action]) + "," + str(self.smaller_actions[action]) + "," + str(self.total_actions[action]) + "," 
-		# 		+ str(self.action_lens[action]/self.total_actions[action]))
-
 		print("Total length ", self.total_len)
 		
-		# print("smaller_actions ", self.smaller_actions)
-		# print("Total actions ", self.total_actions)
 		self.num_hand_points = 63
 
 	def __len__(self):
@@ -128,7 +103,7 @@ class TrajectoryActionTemporalDataset(FairseqDataset):
 		filepath_idx, w_idx = self.id2file[idx]
 
 		filepath = self.all_filepaths[filepath_idx]
-		target = 45 ## Keeping a default target + 45 actions which makes 46 total actions
+		target = [45]*self.window_size ## Keeping a default target + 45 actions which makes 46 total actions
 					# 45 is an unknown action that model outputs when it doesn't know what to do
 		with open(filepath) as file:
 			file_contents = file.readlines()
@@ -146,8 +121,8 @@ class TrajectoryActionTemporalDataset(FairseqDataset):
 				for idx in range(1, len(contents)):
 					traj_array[k, idx-1] = contents[idx]
 				seq_len+=1
+				target[k] = self.action_labels[filepath.split("/")[-3]]
 
-			target = self.action_labels[filepath.split("/")[-3]]
 			item = {
 				'id': filepath_idx,
 				'source': traj_array,

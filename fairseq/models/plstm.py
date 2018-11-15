@@ -1,6 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.nn.init as init
+
+import numpy as np
 
 class pLSTMMemUnit(nn.Module):
 	def __init__(self, input_size, hidden_size):
@@ -17,6 +20,7 @@ class pLSTMMemUnit(nn.Module):
 		"""
 		super(pLSTMMemUnit, self).__init__()
 		self.hidden_size = hidden_size
+		self.input_size = input_size
 
 		### input weights for each of the gates
 		self.Wpii = nn.Linear(input_size, hidden_size)
@@ -29,13 +33,13 @@ class pLSTMMemUnit(nn.Module):
 		init.xavier_normal(self.Wpgi.state_dict()['weight'])
 
 		### hidden weights for each of the gates
-		self.Wpih = nn.Linear(hidden_size, hidden_size)
+		self.Wpih = nn.Linear(hidden_size*5, hidden_size)
 		init.xavier_normal(self.Wpih.state_dict()['weight'])
 
-		self.Wpfh = nn.Linear(hidden_size, hidden_size)
+		self.Wpfh = nn.Linear(hidden_size*5, hidden_size)
 		init.xavier_normal(self.Wpfh.state_dict()['weight'])
 		
-		self.Wpgh = nn.Linear(hidden_size, hidden_size)
+		self.Wpgh = nn.Linear(hidden_size*5, hidden_size)
 		init.xavier_normal(self.Wpgh.state_dict()['weight'])
 	
 	def forward(self, xt, prev_ht, prev_ct):
@@ -53,6 +57,11 @@ class pLSTMMemUnit(nn.Module):
 		each of the individual gates.
 
 		"""
+		# print("Input size ", self.input_size)
+		# print(self.Wpii(xt).size())
+		# print(self.Wpih(prev_ht).size())
+		# print(prev_ht.size())
+
 		ip = F.sigmoid(self.Wpii(xt) + self.Wpih(prev_ht))
 		fp = F.sigmoid(self.Wpfi(xt) + self.Wpfh(prev_ht))
 		gp = F.tanh(self.Wpgi(xt) + self.Wpgh(prev_ht))
@@ -65,8 +74,9 @@ class pLSTMCell(nn.Module):
 	Implements Part-LSTM cell to process inputs at time t
 
 	"""
-	def __init__(self, input_size, hidden_size, num_parts=5):
+	def __init__(self, input_size, hidden_size, part_idx_vals, num_parts=5, part_input_size=15):
 		super(pLSTMCell, self).__init__()
+
 		self.hidden_size=hidden_size
 
 		### We have 21 total 3D points 
@@ -78,26 +88,28 @@ class pLSTMCell(nn.Module):
 
 		self.input_size = input_size
 
-		part_input_size = (input_size-1)/num_parts
-		self.part_indices = {
-								"1" : [0,1,6,11,16],
-								"2" : [0,2,7,12,17],
-								"3" : [0,3,8,13,18],
-								"4" : [0,4,9,14,19],
-								"5" : [0,5,10,15,20]
-							}
-		self.part_idx_vals = {}
-		for k in self.part_indices.keys():
-			self.part_idx_vals[k] = [3*n+i for n in self.part_indices[k] for i in range(3)]
+		# if reorder_input:
+		# 	self.part_indices = {
+		# 							"1" : [0,1,6,11,16],
+		# 							"2" : [0,2,7,12,17],
+		# 							"3" : [0,3,8,13,18],
+		# 							"4" : [0,4,9,14,19],
+		# 							"5" : [0,5,10,15,20]
+		# 						}
+		# self.part_idx_vals = {}
+		# for k in self.part_indices.keys():
+		# 	self.part_idx_vals[k] = [3*n+i for n in self.part_indices[k] for i in range(3)]
 
-		self.p1 = pLSTMMemUnit(part_input_size*3, hidden_size)
-		self.p2 = pLSTMMemUnit(part_input_size*3, hidden_size)
-		self.p3 = pLSTMMemUnit(part_input_size*3, hidden_size)
-		self.p4 = pLSTMMemUnit(part_input_size*3, hidden_size)
-		self.p5 = pLSTMMemUnit(part_input_size*3, hidden_size)
+		self.part_idx_vals = part_idx_vals
 
-		self.Woi = nn.Linear(input_size, hidden_size)
-		self.Woh = nn.Linear(hidden_size, hidden_size)
+		self.p1 = pLSTMMemUnit(part_input_size, hidden_size)
+		self.p2 = pLSTMMemUnit(part_input_size, hidden_size)
+		self.p3 = pLSTMMemUnit(part_input_size, hidden_size)
+		self.p4 = pLSTMMemUnit(part_input_size, hidden_size)
+		self.p5 = pLSTMMemUnit(part_input_size, hidden_size)
+
+		self.Woi = nn.Linear(part_input_size*5, hidden_size*5)
+		self.Woh = nn.Linear(hidden_size*5, hidden_size*5)
 
 	def forward(self, xt, prev_ht, prev_ct):
 		"""
@@ -107,39 +119,48 @@ class pLSTMCell(nn.Module):
 		c_t = cat(c_1, c2, ..., c_p)
 		ht = o * tanh (c_t)
 		"""
-		x1t = xt.gather(0, torch.tensor(self.part_idx_vals["1"]).long())
-		x2t = xt.gather(1, torch.tensor(self.part_idx_vals["2"]).long())
-		x3t = xt.gather(2, torch.tensor(self.part_idx_vals["3"]).long())
-		x4t = xt.gather(3, torch.tensor(self.part_idx_vals["4"]).long())
-		x5t = xt.gather(4, torch.tensor(self.part_idx_vals["5"]).long())
+		# print("xt ", xt.size())
+		# print(torch.tensor(self.part_idx_vals["1"]).cuda().long().size())
+		# print(prev_ct.size())
 
+		x1t = xt.gather(1, torch.tensor(np.stack([self.part_idx_vals["1"]]*xt.size(0))).cuda().long())
+		x2t = xt.gather(1, torch.tensor(np.stack([self.part_idx_vals["2"]]*xt.size(0))).cuda().long())
+		x3t = xt.gather(1, torch.tensor(np.stack([self.part_idx_vals["3"]]*xt.size(0))).cuda().long())
+		x4t = xt.gather(1, torch.tensor(np.stack([self.part_idx_vals["4"]]*xt.size(0))).cuda().long())
+		x5t = xt.gather(1, torch.tensor(np.stack([self.part_idx_vals["5"]]*xt.size(0))).cuda().long())
 		c1 = self.p1(x1t, prev_ht, prev_ct[0])
 		c2 = self.p2(x2t, prev_ht, prev_ct[1])
 		c3 = self.p3(x3t, prev_ht, prev_ct[2])
 		c4 = self.p4(x4t, prev_ht, prev_ct[3])
 		c5 = self.p5(x5t, prev_ht, prev_ct[4])
 
-		ct = torch.cat((c1, c2, c3, c4, c5), dim=0)
-		o = F.sigmoid(self.Woi(xt) + self.Woh(prev_ht))
+		#import pdb
+		#pdb.set_trace()
+
+		ct = torch.cat((c1, c2, c3, c4, c5), dim=1)
+		xt_cat = torch.cat((x1t, x2t, x3t, x4t, x5t), dim=1)
+
+		o = F.sigmoid(self.Woi(xt_cat) + self.Woh(prev_ht))
 		ht = o * F.tanh(ct)
 		return ht, (c1, c2, c3, c4, c5)
 
-	def init_hidden(self):
-        h_0 = torch.zeros(1, self.hidden_size, requires_grad=True).cuda()
-        c_0 = torch.zeros(1, self.hidden_size, requires_grad=True).cuda()
-        return h_0, c_0
-
-
 class pLSTM(nn.Module):
-	def __init__(self, input_size, hidden_size, batch_first=True):
+	def __init__(self, input_size, hidden_size, part_idx_vals, batch_first=True, num_parts=5, part_input_size=15):
+		super(pLSTM, self).__init__()
+		
 		self.input_size = input_size
 		self.hidden_size = hidden_size
 		self.num_layers = 1
 		self.batch_first = batch_first
 
-		self.cell = pLSTMCell(input_size, hidden_size)
+		self.cell = pLSTMCell(input_size, hidden_size, part_idx_vals, num_parts, part_input_size)
+	
+	def init_hidden(self):
+		h_0 = torch.zeros(1, self.hidden_size*5, requires_grad=True).cuda()
+		c_0 = torch.zeros(1, self.hidden_size, requires_grad=True).cuda()
+		return h_0, (c_0, c_0, c_0, c_0, c_0)
 
-	def forward(self, input, hidden):
+	def forward(self, input):
 
 		def recurrence(xt, hidden):
 			ht, ct = hidden
@@ -151,6 +172,8 @@ class pLSTM(nn.Module):
 
 		output = []
 		steps = range(input.size(0))
+		hidden = self.init_hidden()
+
 		for i in steps:
 			hidden = recurrence(input[i], hidden)
 			if isinstance(hidden, tuple):
@@ -162,5 +185,5 @@ class pLSTM(nn.Module):
 
 		if self.batch_first:
 			output = output.transpose(0, 1)
-
+		# print("Size of output ", output.size())
 		return output, hidden

@@ -50,17 +50,18 @@ class TrajectoryActionDataset(FairseqDataset):
 		filepath = os.path.join(self.all_filepaths[filepath_idx], "skeleton.txt")
 		target = 45 ## Keeping a default target + 45 actions which makes 46 total actions
 					# 45 is an unknown action that model outputs when it doesn't know what to do
-		traj_array = np.zeros((self.num_input_points, self.num_hand_points))
+		#traj_array = np.zeros((self.num_input_points, self.num_hand_points))
 		with open(filepath) as file:
 			file_contents = file.readlines()
 			
 			traj_array_len = min(len(file_contents), self.num_input_points)
-			traj_array = np.zeros((self.num_input_points, self.num_hand_points))
+			traj_array = np.zeros((traj_array_len, self.num_hand_points))
 			for i in range(traj_array_len):
 				contents = file_contents[i].split()
 				for idx in range(1, len(contents)):
 					traj_array[i, idx-1] = contents[idx]
 			target = self.action_labels[filepath.split("/")[-3]]
+
 		return {
 			'id': filepath_idx,
 			'source': traj_array,
@@ -77,8 +78,16 @@ class TrajectoryActionDataset(FairseqDataset):
 		seq_lengths = [sample['length'] for sample in samples]
 		#import pdb; pdb.set_trace()
 		
+		ordered = sorted(src_tokens, key=len, reverse=True)
+		seq_lengths = sorted(seq_lengths, reverse=True)
+
+		padded = [
+			np.pad(li, pad_width=((0, self.num_input_points-len(li)), (0, 0)), mode='constant')
+			for li in ordered
+		]
+
 		net_input = {}
-		net_input["src_tokens"] = torch.FloatTensor(src_tokens)
+		net_input["src_tokens"] = torch.FloatTensor(padded)
 		net_input["src_lengths"] = torch.LongTensor(seq_lengths)
 		
 		return {"id": torch.LongTensor(ids),

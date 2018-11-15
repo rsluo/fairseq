@@ -1,4 +1,3 @@
-
 # Copyright (c) 2017-present, Facebook, Inc.
 # All rights reserved.
 #
@@ -17,8 +16,8 @@ from fairseq.data import (
 from fairseq.tasks import FairseqTask, register_task
 
 
-@register_task('action_prediction')
-class ActionPredictionTask(FairseqTask):
+@register_task('action_visualization')
+class ActionVisualizationTask(FairseqTask):
     """
     Train an action prediction model.
 
@@ -47,6 +46,10 @@ class ActionPredictionTask(FairseqTask):
     @staticmethod
     def add_args(parser):
         """Add task-specific arguments to the parser."""
+        parser.add_argument('--test-action', type=int,
+                    		help='default action to be tested')
+        parser.add_argument('--filepath', default=None, type=str,
+            		help='default action to be tested')
         parser.add_argument('data', help='path to root data directory')
         parser.add_argument('--num_input_points', default=10, type=int, 
                             help='number of past trajectory points')
@@ -88,17 +91,17 @@ class ActionPredictionTask(FairseqTask):
         Args:
             split (str): name of the split (e.g., train, valid, test)
         """
-        print("Loading dataset split ", split)
         shuffle = False
         root_dir = self.args.data
-
         split_dir = os.path.join(root_dir, split)
         num_input_points = self.args.num_input_points
+        test_action = self.args.test_action
+        filepath = self.args.filepath
 
         loaded_datasets = []
-        loaded_datasets.append(TrajectoryActionTemporalDataset(split_dir, num_input_points, shuffle))
-        
-        self.datasets[split] = TrajectoryActionTemporalDataset(split_dir, num_input_points, shuffle)
+        loaded_datasets.append(TrajectoryActionTemporalDataset(split_dir, num_input_points, shuffle, test_action, filepath))
+
+        self.datasets[split] = TrajectoryActionTemporalDataset(split_dir, num_input_points, shuffle, test_action, filepath)
         self.num_classes = self.datasets[split].num_classes()
 
 

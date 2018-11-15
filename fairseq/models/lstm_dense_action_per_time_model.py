@@ -8,8 +8,8 @@ from fairseq.models import BaseFairseqModel, register_model
 from fairseq.models import register_model_architecture
 
 
-@register_model('lstm_dense_action_model')
-class LSTMDenseActionModel(BaseFairseqModel):
+@register_model('lstm_dense_action_per_time_model')
+class LSTMDenseActionPerTimeModel(BaseFairseqModel):
 
 	def __init__(self, encoder):
 			super().__init__()
@@ -35,7 +35,11 @@ class LSTMDenseActionModel(BaseFairseqModel):
 			Returns:
 				the decoder's output, typically of shape `(batch, tgt_len, vocab)`
 			"""
+			# print(src_tokens.size())
+			# print(src_lengths)
 			encoder_out = self.encoder(src_tokens, src_lengths)['final_hidden']
+			
+			#probs = F.softmax(encoder_out, dim=-1)
 			return encoder_out
 	
 	def get_normalized_probs(self, net_output, log_probs, sample=None):
@@ -84,7 +88,7 @@ class LSTMDenseActionModel(BaseFairseqModel):
 			dropout=args.encoder_dropout
 		)
 		
-		model = LSTMDenseActionModel(encoder)
+		model = LSTMDenseActionPerTimeModel(encoder)
 
 		# Print the model architecture.
 		print(model)
@@ -95,16 +99,15 @@ class SimpleLSTMEncoder(FairseqEncoder):
 	def __init__(self, 
 				args,
 				dictionary={},
-				hidden_dim=128, 
+				hidden_dim=100, 
 				input_dim=63, 
-				num_layers=1, 
+				num_layers=2, 
 				dropout=0.0, 
 				use_bidirection=False, 
 				use_attention=False, 
 				cell_type='LSTM', 
-				use_cuda=True, 
-				max_length=784,
-				out_classses = 46   
+				use_cuda=True,
+				out_classes = 46   
 				# Hardcoding; number of classes present in the current dataset
 				# 0 represents an unknown action - \
 				# model should output this when it doesn't know what to do
@@ -118,6 +121,8 @@ class SimpleLSTMEncoder(FairseqEncoder):
 		self.use_attention = use_attention
 		self.use_bidirection = use_bidirection
 		self.cell_type = cell_type
+		self.out_classes = out_classes
+
 		if cell_type == 'GRU':
 			self.cell = nn.GRU(input_dim,
 							   hidden_dim,
@@ -142,21 +147,18 @@ class SimpleLSTMEncoder(FairseqEncoder):
 		else:
 			self.baseline = nn.Linear(input_dim, hidden_dim)
 
-		self.dense = nn.Linear(hidden_dim, out_classses)
-
-		# ### #
-		# use_attention = False ###### TODO Setting this to false to obtain a good baseline #####
-		# if use_attention:
-		# 	self.attn = nn.Linear((2 if use_bidirection else 1) * hidden_dim, 1)
-		# 	self.attn_softmax = nn.Softmax(dim=1)
-
-		
+		self.dense1 = nn.Linear(hidden_dim, out_classes)
 
 	def forward(self, inputs, lengths=None, return_attn=False):
 		#print("Forward pass ", inputs.size())
 		packed = nn.utils.rnn.pack_padded_sequence(inputs, lengths, batch_first=True)
 		_outputs, (final_hidden, _final_cell) = self.cell(packed.float())
-		encoded = self.dense(final_hidden.squeeze(0))
+		_outputs, _ = torch.nn.utils.rnn.pad_packed_sequence(_outputs, batch_first=True)
+		_outputs = _outputs.contiguous()
+		_outputs = _outputs.view(-1, _outputs.shape[2])
+		encoded = self.dense1(_outputs)
+		encoded = encoded.view(inputs.size(0), inputs.size(1), self.out_classes).transpose(1, 2)
+		# encoded = self.dense2(encoded)
 		return {'final_hidden': encoded}
 
 	def reorder_encoder_out(self, encoder_out, new_order):
@@ -176,7 +178,7 @@ class SimpleLSTMEncoder(FairseqEncoder):
 			'final_hidden': final_hidden.index_select(0, new_order),
 		}
 
-@register_model_architecture('lstm_dense_action_model', 'lstm_dense_am')
+@register_model_architecture('lstm_dense_action_per_time_model', 'bilstm_dense_per_time_am')
 def tutorial_simple_lstm(args):
 	args.encoder_hidden_dim = getattr(args, 'encoder_hidden_dim', 256)
 
